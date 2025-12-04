@@ -35,26 +35,30 @@ export class JadxDecompiler implements SmaliDecompiler {
 
     async decompile(smaliFileUri: Uri): Promise<Uri> {
         const smaliClassName = await getSmaliDocumentClassNameFromUri(smaliFileUri)
-        if (!smaliClassName) throw new DecompileError("Illegal smali file")
+        if (!smaliClassName) throw new DecompileError("无效的 smali 文件")
         const config = await this.loadConfig()
-        if (!config.path) throw new DecompileError("The jadx executable path has not been configured")
-        if (!(await fsAsync.stat(config.path)).isFile()) throw new DecompileError("Illegal jadx executable path")
+        if (!config.path) throw new DecompileError("Jadx 可执行文件路径未配置")
+        if (!(await fsAsync.stat(config.path)).isFile()) throw new DecompileError("无效的 Jadx 可执行文件路径")
         const outputFilePath = this.getOutputFilePath(smaliClassName)
         const { stdout, stderr } = await execAsync(`${await config.path} ${this.quote(smaliFileUri.fsPath)} -ds ${this.quote(this.sourceOutputDir)} ${config.options ?? ""}`)
         this.outputChannel.append(stdout)
         if (stderr && stderr.length > 0) {
             this.outputChannel.show()
             this.outputChannel.append(stderr)
-            throw new DecompileError("View the output for details")
+            throw new DecompileError("查看输出以获取更多信息")
         }
         try {
             await fsAsync.stat(outputFilePath)
         } catch(e) {
-            throw new DecompileError(`Error is caught when reading ${outputFilePath}: ${e}`)
+            throw new DecompileError(`读取时发生错误: ${outputFilePath}: ${e}`)
         }
+        // Return a compact display path (keeps tab title short) and
+        // place the real filesystem path into the URI query so the
+        // content provider can read the actual file from disk.
         return Uri.from({
             scheme: JavaCodeProvider.scheme,
-            path: outputFilePath
+            path: '/' + smaliClassName + '.java',
+            query: encodeURIComponent(outputFilePath)
         })
     }
 

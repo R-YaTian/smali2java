@@ -12,7 +12,8 @@ export default class JavaCodeProvider implements TextDocumentContentProvider {
     }
 
     async provideTextDocumentContent(uri: Uri): Promise<string> {
-        const buffer = await fs.readFile(uri.path)
+        const realPath = uri.query ? decodeURIComponent(uri.query) : uri.path
+        const buffer = await fs.readFile(realPath)
         return buffer.toString()
     }
 }
